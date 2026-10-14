@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ara – Free AI stock photos</title>
+<meta name="description" content="Free AI-generated photos of food, festivals, business backgrounds and nature.">
+<meta property="og:title" content="Ara – Free AI stock photos">
+<meta property="og:description" content="Food, festivals, business backgrounds and nature. Free to download.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='28' fill='%233b2fb5'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia'%3EA%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f7f8fa;--ink:#1b1f2a;--muted:#656b78;--accent:#3b2fb5;--line:#e3e5ea;--card:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:0 18px}
+header{padding:18px 0}
+.logo{font:700 30px/1 Georgia,"Times New Roman",serif;letter-spacing:-.02em;color:var(--ink);text-decoration:none}
+.logo span{color:var(--accent)}
+h1{font:700 clamp(30px,8vw,48px)/1.1 Georgia,serif;letter-spacing:-.02em;margin:26px 0 10px;max-width:14em}
+.lead{color:var(--muted);max-width:34em;margin:0 0 22px}
+.intro{animation:rise .6s ease both}
+.lead{animation:rise .6s .1s ease both}
+.chips{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;scroll-behavior:smooth;padding:2px 2px 8px;margin-bottom:14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;scroll-snap-align:center;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:10px 18px;font:inherit;cursor:pointer;min-height:44px;transition:background .25s,color .25s,border-color .25s,transform .15s,box-shadow .25s}
+.chip:active{transform:scale(.93)}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(59,47,181,.28);transform:translateY(-1px)}
+button:focus-visible{outline:3px solid #9a8cff;outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;opacity:0;transform:translateY(24px) scale(.97);transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+.card.in{opacity:1;transform:none}
+.card:hover{box-shadow:0 10px 26px rgba(27,31,42,.1)}
+.card .pic{overflow:hidden;background:#e9ebf0}
+.card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;transition:transform .6s ease}
+.card:hover img{transform:scale(1.05)}
+.meta{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px}
+.meta b{display:block;font-size:15px;font-weight:600}
+.meta small{color:var(--muted)}
+.dl{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:10px 14px;font:600 14px inherit;cursor:pointer;min-height:44px;min-width:104px;transition:transform .15s,background .3s}
+.dl:active{transform:scale(.92)}
+.dl.done{background:#1d7a46}
+.state{border:1px dashed var(--line);border-radius:14px;padding:36px 20px;text-align:center;color:var(--muted);background:var(--card);animation:rise .5s ease both}
+.state.err{border-color:#d9534f;color:#8a2a27}
+footer{border-top:1px solid var(--line);margin-top:44px;padding:22px 0 40px;color:var(--muted);font-size:14px}
+footer p{margin:4px 0}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .card{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="logo" href="./">Ara<span>.</span></a></header>
+
+<main>
+  <h1 class="intro">Free AI photos, ready to download</h1>
+  <p class="lead">Food, festivals, business backgrounds and nature. Every image is AI-generated and labelled.</p>
+
+  <div class="chips" id="chips" role="group" aria-label="Categories"></div>
+  <div id="gallery" aria-live="polite"></div>
+</main>
+
+<footer>
+  <p>Contact: add-your-email@example.com</p>
+  <p>Privacy: Ara has no accounts and collects no personal data.</p>
+  <p>&copy; Ara</p>
+</footer>
+</div>
+
+<script>
+const CATS = ["All","Food","Festivals","Business","Nature"];
+const $ = s => document.querySelector(s);
+let photos = [], cat = "All", io = null;
+
+function state(text, err){
+  const d = document.createElement("div");
+  d.className = "state" + (err ? " err" : "");
+  d.textContent = text;
+  return d;
+}
+
+function reveal(cards){
+  if(!("IntersectionObserver" in window)){ cards.forEach(c => c.classList.add("in")); return; }
+  if(io) io.disconnect();
+  io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); }
+    });
+  }, {threshold:.12});
+  cards.forEach(c => io.observe(c));
+}
+
+function download(p, btn){
+  const a = document.createElement("a");
+  a.href = "photos/" + encodeURIComponent(p.file);
+  a.download = p.file;
+  document.body.appendChild(a); a.click(); a.remove();
+  btn.textContent = "Saved ✓"; btn.classList.add("done");
+  setTimeout(() => { btn.textContent = "Download"; btn.classList.remove("done"); }, 1800);
+}
+
+function render(){
+  const g = $("#gallery"); g.replaceChildren();
+  const list = photos.filter(p => cat === "All" || p.category === cat);
+  if(!list.length){
+    g.append(state(photos.length ? "No photos in this category yet." : "No photos yet. New AI photos are added soon.")); return;
+  }
+  const grid = document.createElement("div"); grid.className = "grid";
+  const cards = [];
+  list.forEach((p, i) => {
+    const c = document.createElement("div"); c.className = "card";
+    c.style.transitionDelay = Math.min(i % 6, 5) * 70 + "ms";
+    const pic = document.createElement("div"); pic.className = "pic";
+    const img = document.createElement("img");
+    img.src = "photos/" + encodeURIComponent(p.file); img.alt = p.title + " (AI-generated)"; img.loading = "lazy";
+    pic.append(img);
+    const m = document.createElement("div"); m.className = "meta";
+    const t = document.createElement("div");
+    const b = document.createElement("b"); b.textContent = p.title;
+    const s = document.createElement("small"); s.textContent = p.category + " · AI-generated";
+    t.append(b, s);
+    const btn = document.createElement("button"); btn.className = "dl"; btn.type = "button";
+    btn.textContent = "Download"; btn.setAttribute("aria-label", "Download " + p.title);
+    btn.onclick = () => download(p, btn);
+    m.append(t, btn); c.append(pic, m); grid.append(c); cards.push(c);
+  });
+  g.append(grid);
+  requestAnimationFrame(() => reveal(cards));
+}
+
+function renderChips(){
+  const box = $("#chips"); box.replaceChildren();
+  CATS.forEach(name => {
+    const b = document.createElement("button"); b.className = "chip"; b.type = "button";
+    b.textContent = name; b.setAttribute("aria-pressed", name === cat);
+    b.onclick = () => { cat = name; renderChips(); render(); };
+    box.append(b);
+    if(name === cat) requestAnimationFrame(() => b.scrollIntoView({behavior:"smooth", inline:"center", block:"nearest"}));
+  });
+}
+
+renderChips();
+fetch("photos.json").then(r => { if(!r.ok) throw new Error(); return r.json(); })
+  .then(data => { photos = Array.isArray(data) ? data : []; render(); })
+  .catch(() => { $("#gallery").append(state("The gallery could not load. Refresh the page, or try again later.", true)); });
+</script>
+</body>
+</html>
