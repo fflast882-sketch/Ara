@@ -74,6 +74,7 @@ footer p{margin:4px 0}
 const CATS = ["All","Food","Festivals","Business","Nature"];
 const $ = s => document.querySelector(s);
 let photos = [], cat = "All", io = null;
+const url = p => "photos/" + p.file.split("/").map(encodeURIComponent).join("/");
 
 function state(text, err){
   const d = document.createElement("div");
@@ -95,8 +96,8 @@ function reveal(cards){
 
 function download(p, btn){
   const a = document.createElement("a");
-  a.href = "photos/" + encodeURIComponent(p.file);
-  a.download = p.file;
+  a.href = url(p);
+  a.download = p.file.split("/").pop();
   document.body.appendChild(a); a.click(); a.remove();
   btn.textContent = "Saved ✓"; btn.classList.add("done");
   setTimeout(() => { btn.textContent = "Download"; btn.classList.remove("done"); }, 1800);
@@ -115,7 +116,7 @@ function render(){
     c.style.transitionDelay = Math.min(i % 6, 5) * 70 + "ms";
     const pic = document.createElement("div"); pic.className = "pic";
     const img = document.createElement("img");
-    img.src = "photos/" + encodeURIComponent(p.file); img.alt = p.title + " (AI-generated)"; img.loading = "lazy";
+    img.src = url(p); img.alt = p.title + " (AI-generated)"; img.loading = "lazy";
     pic.append(img);
     const m = document.createElement("div"); m.className = "meta";
     const t = document.createElement("div");
@@ -142,10 +143,30 @@ function renderChips(){
   });
 }
 
+const OWNER = "fflast882-sketch", REPO = "Ara";
+const SOURCES = [["Food","food"],["Festivals","festivals"],["Business","business"],["Nature","nature"],["More",""]];
+const isImg = n => /\.(jpe?g|png|webp)$/i.test(n);
+function niceTitle(n, c){
+  let t = n.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").replace(/\s*\d{8,14}\s*$/, "").replace(/\s+/g, " ").trim();
+  if(!t) return c + " photo";
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  return t.length > 60 ? t.slice(0, 57) + "…" : t;
+}
+async function loadFolder([c, dir]){
+  const path = "photos" + (dir ? "/" + dir : "");
+  const r = await fetch("https://api.github.com/repos/" + OWNER + "/" + REPO + "/contents/" + path);
+  if(r.status === 404) return [];
+  if(!r.ok) throw new Error(String(r.status));
+  const items = await r.json();
+  return items.filter(i => i.type === "file" && isImg(i.name))
+    .sort((a, b) => b.name.localeCompare(a.name))
+    .map(i => ({file: (dir ? dir + "/" : "") + i.name, title: niceTitle(i.name, c), category: c}));
+}
+
 renderChips();
-fetch("photos.json").then(r => { if(!r.ok) throw new Error(); return r.json(); })
-  .then(data => { photos = Array.isArray(data) ? data : []; render(); })
-  .catch(() => { $("#gallery").append(state("The gallery could not load. Refresh the page, or try again later.", true)); });
+Promise.all(SOURCES.map(loadFolder))
+  .then(lists => { photos = lists.flat(); render(); })
+  .catch(() => { $("#gallery").append(state("The gallery could not load. Refresh the page, or try again in a few minutes.", true)); });
 </script>
 </body>
 </html>
