@@ -1,0 +1,45 @@
+name: Update photo list
+on:
+  push:
+    paths:
+      - 'photos/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build photos.json
+        run: |
+          python3 - <<'PY'
+          import os, json, re
+          cats = [("Food","food"),("Festivals","festivals"),("Business","business"),("Nature","nature")]
+          ok = (".jpg",".jpeg",".png",".webp")
+          def title(n, c):
+              t = re.sub(r"\.[^.]+$", "", n)
+              t = re.sub(r"[_-]+", " ", t)
+              t = re.sub(r"\s*\d{8,14}\s*$", "", t)
+              t = re.sub(r"\s+", " ", t).strip()
+              if not t:
+                  return c + " photo"
+              t = t[0].upper() + t[1:]
+              return t if len(t) <= 60 else t[:57] + "…"
+          out = []
+          for c, d in cats + [("More", "")]:
+              folder = "photos/" + d if d else "photos"
+              if not os.path.isdir(folder):
+                  continue
+              for n in sorted(os.listdir(folder), reverse=True):
+                  p = os.path.join(folder, n)
+                  if os.path.isfile(p) and n.lower().endswith(ok):
+                      out.append({"file": (d + "/" if d else "") + n, "title": title(n, c), "category": c})
+          json.dump(out, open("photos.json", "w"), ensure_ascii=False, indent=1)
+          PY
+      - name: Save the list
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add photos.json
+          git diff --cached --quiet || (git commit -m "Update photo list" && git push)
