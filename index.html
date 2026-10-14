@@ -50,6 +50,9 @@ button:focus-visible{outline:3px solid #9a8cff;outline-offset:2px}
 .dl.done{background:#1d7a46}
 .state{border:1px dashed var(--line);border-radius:14px;padding:36px 20px;text-align:center;color:var(--muted);background:var(--card);animation:rise .5s ease both}
 .state.err{border-color:#d9534f;color:#8a2a27}
+.about{margin:44px 0 0;max-width:40em}
+.about h2{font:700 24px/1.2 Georgia,serif;margin:0 0 10px}
+.about p{color:var(--muted);margin:0 0 10px}
 footer{border-top:1px solid var(--line);margin-top:44px;padding:22px 0 40px;color:var(--muted);font-size:14px}
 footer p{margin:4px 0}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
@@ -69,6 +72,13 @@ footer p{margin:4px 0}
 
   <div class="chips" id="chips" role="group" aria-label="Categories"></div>
   <div id="gallery" aria-live="polite"></div>
+
+  <section class="about">
+    <h2>About Ara</h2>
+    <p>Ara is a small collection of AI-generated photos that anyone can download for free. Every image is created with AI and labelled as AI-generated, so nobody mistakes it for a real photograph.</p>
+    <p><b>Food</b> covers dishes and table scenes. <b>Festivals</b> covers celebrations and colour. <b>Business</b> covers clean backgrounds for presentations, posters and websites. <b>Nature</b> covers landscapes, plants and skies.</p>
+    <p>New photos are added regularly. Tap a category above to browse, then press Download on any photo.</p>
+  </section>
 </main>
 
 <footer>
@@ -171,9 +181,18 @@ async function loadFolder([c, dir]){
     .map(i => ({file: (dir ? dir + "/" : "") + i.name, title: niceTitle(i.name, c), category: c}));
 }
 
+async function loadPhotos(){
+  try{
+    const r = await fetch("photos.json", {cache:"no-cache"});
+    if(r.ok){ const d = await r.json(); if(Array.isArray(d) && d.length) return d; }
+  }catch(e){}
+  const lists = await Promise.all(SOURCES.map(loadFolder));
+  return lists.flat();
+}
+
 renderChips();
-Promise.all(SOURCES.map(loadFolder))
-  .then(lists => { photos = lists.flat(); render(); })
+loadPhotos()
+  .then(list => { photos = list; render(); })
   .catch(() => { $("#gallery").append(state("The gallery could not load. Refresh the page, or try again in a few minutes.", true)); });
 </script>
 </body>
